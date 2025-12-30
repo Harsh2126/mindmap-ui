@@ -1,0 +1,159 @@
+.project-header {
+  text-align: center;
+  padding-bottom: 20px;
+  border-bottom: 1px solid #333;
+  margin-bottom: 24px;
+}
+
+.project-header h2 {
+  color: #4a9eff;
+  margin: 0 0 8px 0;
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.project-header p {
+  color: #888;
+  margin: 0;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.sidebar {
+  position: fixed;
+  right: 0;
+  top: 0;
+  width: 350px;
+  height: 100vh;
+  background: #1a1a1a;
+  border-left: 1px solid #333;
+  overflow-y: auto;
+  z-index: 100;
+}
+
+.sidebar-content {
+  padding: 24px;
+}
+
+.sidebar h3 {
+  color: #fff;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.sidebar h4 {
+  color: #ccc;
+  margin: 24px 0 12px 0;
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.field-group {
+  margin-bottom: 20px;
+}
+
+.field-group label {
+  display: block;
+  color: #aaa;
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 6px;
+}
+
+.field-value {
+  color: #fff;
+  font-size: 14px;
+  line-height: 1.5;
+  padding: 8px;
+  border-radius: 4px;
+  background: #2a2a2a;
+  border: 1px solid transparent;
+  min-height: 20px;
+}
+
+.field-value.editable {
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.field-value.editable:hover {
+  background: #333;
+  border-color: #555;
+}
+
+.edit-field input,
+.edit-field textarea {
+  width: 100%;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  color: #fff;
+  padding: 8px;
+  border-radius: 4px;
+  font-size: 14px;
+  font-family: inherit;
+  resize: vertical;
+}
+
+.edit-field input:focus,
+.edit-field textarea:focus {
+  outline: none;
+  border-color: #4a9eff;
+}
+
+.edit-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.edit-actions button {
+  background: #4a9eff;
+  border: none;
+  color: white;
+  padding: 6px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  transition: background 0.2s ease;
+}
+
+.edit-actions button:hover {
+  background: #357abd;
+}
+
+.edit-actions button:last-child {
+  background: #666;
+}
+
+.edit-actions button:last-child:hover {
+  background: #777;
+}
+
+.metadata-section {
+  border-top: 1px solid #333;
+  padding-top: 20px;
+}
+
+.metadata-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.metadata-list li {
+  color: #ccc;
+  font-size: 13px;
+  padding: 4px 0;
+  padding-left: 16px;
+  position: relative;
+}
+
+.metadata-list li::before {
+  content: '•';
+  color: #666;
+  position: absolute;
+  left: 0;
+}

@@ -131,6 +131,12 @@ function App() {
     }
   }, [selectedNode, deleteNode]);
 
+  const handleReset = useCallback(() => {
+    localStorage.removeItem('mindmap-data');
+    localStorage.removeItem('mindmap-selected-node');
+    window.location.reload();
+  }, []);
+
   // Export functions
   const handleDownloadImage = useCallback(() => {
     const svg = document.querySelector('.mindmap-svg');
@@ -186,6 +192,7 @@ function App() {
         onDeleteNode={handleDeleteNode}
         onDownloadImage={handleDownloadImage}
         onDownloadDocs={handleDownloadDocs}
+        onReset={handleReset}
         canDrillDown={selectedNode?.children?.length > 0}
         canDrillUp={drillPath.length > 0}
         canDelete={selectedNode?.id !== 'root'}

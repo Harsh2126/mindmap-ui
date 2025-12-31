@@ -11,6 +11,7 @@ const Toolbar = ({
   onDeleteNode,
   onDownloadImage, 
   onDownloadDocs,
+  onReset,
   canDrillDown,
   canDrillUp,
   canDelete
@@ -47,6 +48,12 @@ const Toolbar = ({
         <button onClick={onFitView} title="Fit View">
           <span>⌂</span> Fit View
         </button>
+        <button onClick={onReset} title="Reset to Start">
+          <span>↻</span> Reset
+        </button>
+      </div>
+      
+      <div className="toolbar-group">
         <button onClick={onAddNode} title="Add Node">
           <span>+</span> Add Node
         </button>

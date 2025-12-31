@@ -1,4 +1,4 @@
-import React, { useState, useRef, useCallback } from 'react';
+import React, { useState, useRef, useCallback, useEffect } from 'react';
 import MindMap from './components/MindMap';
 import Sidebar from './components/Sidebar';
 import Toolbar from './components/Toolbar';
@@ -11,15 +11,67 @@ import './App.css';
  */
 function App() {
   const { data, loading, error, updateNode, addNode, deleteNode } = useMindMapData();
-  const [selectedNode, setSelectedNode] = useState(null);
+  const [selectedNode, setSelectedNode] = useState(() => {
+    const saved = localStorage.getItem('mindmap-selected-node');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [hoveredNode, setHoveredNode] = useState(null);
   const [expandedNodes, setExpandedNodes] = useState(new Set(['root']));
   const [drillPath, setDrillPath] = useState([]);
   const fitViewRef = useRef();
 
   // Node interaction handlers
-  const handleNodeSelect = useCallback((node) => setSelectedNode(node), []);
+  const handleNodeSelect = useCallback((node) => {
+    setSelectedNode(node);
+    if (node) {
+      try {
+        const cleanNode = { 
+          id: node.id, 
+          title: node.title, 
+          summary: node.summary, 
+          description: node.description,
+          metadata: node.metadata
+        };
+        localStorage.setItem('mindmap-selected-node', JSON.stringify(cleanNode));
+      } catch (error) {
+        console.warn('Failed to save selected node to localStorage:', error);
+      }
+    }
+  }, []);
   const handleNodeHover = useCallback((node) => setHoveredNode(node), []);
+
+  // Update selected node when data changes to keep it in sync
+  useEffect(() => {
+    if (selectedNode && data) {
+      const findNodeById = (node, id) => {
+        if (node.id === id) return node;
+        if (node.children) {
+          for (const child of node.children) {
+            const found = findNodeById(child, id);
+            if (found) return found;
+          }
+        }
+        return null;
+      };
+      
+      const updatedNode = findNodeById(data, selectedNode.id);
+      if (updatedNode) {
+        setSelectedNode(updatedNode);
+        try {
+          const cleanNode = { 
+            id: updatedNode.id, 
+            title: updatedNode.title, 
+            summary: updatedNode.summary, 
+            description: updatedNode.description,
+            metadata: updatedNode.metadata
+          };
+          localStorage.setItem('mindmap-selected-node', JSON.stringify(cleanNode));
+        } catch (error) {
+          console.warn('Failed to update selected node in localStorage:', error);
+        }
+      }
+    }
+  }, [data, selectedNode?.id]);
 
   // Node expansion/collapse
   const handleToggleExpand = useCallback((nodeId) => {
@@ -62,7 +114,7 @@ function App() {
 
   const handleAddNode = useCallback(() => {
     if (selectedNode) {
-      addNode(selectedNode.id, { title: 'New Node', summary: 'Click to edit' });
+      addNode(selectedNode.id, { title: '', summary: '', description: '' });
       setExpandedNodes(prev => new Set([...prev, selectedNode.id]));
     }
   }, [selectedNode, addNode]);
@@ -89,9 +141,12 @@ function App() {
     const link = document.createElement('a');
     link.download = 'mindmap.svg';
     link.href = url;
+    link.style.display = 'none';
     document.body.appendChild(link);
     link.click();
-    document.body.removeChild(link);
+    if (document.body.contains(link)) {
+      document.body.removeChild(link);
+    }
     URL.revokeObjectURL(url);
   }, []);
 

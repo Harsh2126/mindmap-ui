@@ -1,12 +1,8 @@
-import React, { useEffect, useRef, useState, useCallback } from 'react';
+import React, { useEffect, useRef, useState, useCallback, useMemo } from 'react';
 import * as d3 from 'd3';
 import Node from './Node';
 import './MindMap.css';
 
-/**
- * Main MindMap visualization component using D3.js
- * Handles graph rendering, zoom/pan, and node positioning
- */
 const MindMap = ({ 
   data, 
   selectedNode, 
@@ -25,7 +21,15 @@ const MindMap = ({
   const [hoveredNode, setHoveredNode] = useState(null);
   const [tooltip, setTooltip] = useState({ show: false, x: 0, y: 0, content: '' });
 
-  // Get current root based on drill path
+  const BASE_RADIUS = 180;
+  const LEVEL_GAP = 150;
+  const NODE_PADDING = 20;
+
+  const getSubtreeSize = useCallback((node) => {
+    if (!node.children || !expandedNodes.has(node.id)) return 1;
+    return 1 + node.children.reduce((sum, child) => sum + getSubtreeSize(child), 0);
+  }, [expandedNodes]);
+
   const getCurrentRoot = useCallback(() => {
     if (!data || drillPath.length === 0) return data;
     let current = data;
@@ -47,23 +51,40 @@ const MindMap = ({
     return null;
   };
 
-  // Calculate radial layout positions
   const calculateLayout = useCallback((rootNode) => {
     if (!rootNode) return { nodes: [], links: [] };
+
     const nodes = [];
     const links = [];
-    
-    const addNode = (node, level, angle, parentPos, parentId, siblingCount = 1) => {
-      // Dynamic spacing based on level and sibling count
-      const baseDistance = level === 0 ? 0 : 100 + (level - 1) * 80;
-      const distance = baseDistance + Math.max(0, (siblingCount - 3) * 15);
-      
-      const x = parentPos ? parentPos.x + Math.cos(angle) * distance : 0;
-      const y = parentPos ? parentPos.y + Math.sin(angle) * distance : 0;
-      
-      const nodeData = { ...node, x, y, level, _expanded: expandedNodes.has(node.id) };
-      nodes.push(nodeData);
-      
+
+    const layoutNode = (
+      node,
+      level,
+      parentPos,
+      startAngle,
+      endAngle,
+      parentId = null
+    ) => {
+      const angle = (startAngle + endAngle) / 2;
+      const radius = level === 0 ? 0 : BASE_RADIUS + level * LEVEL_GAP;
+
+      const x = parentPos.x + Math.cos(angle) * radius;
+      const y = parentPos.y + Math.sin(angle) * radius;
+
+      const baseSizes = [70, 55, 45, 35];
+      const nodeRadius =
+        baseSizes[Math.min(level, baseSizes.length - 1)] +
+        Math.min((node.title || "").length * 1.2, 20);
+
+      nodes.push({
+        ...node,
+        x,
+        y,
+        level,
+        radius: nodeRadius,
+        _expanded: expandedNodes.has(node.id)
+      });
+
       if (parentId) {
         links.push({
           source: parentId,
@@ -72,35 +93,39 @@ const MindMap = ({
           targetPos: { x, y }
         });
       }
-      
-      // Add children if expanded
-      if (node.children && expandedNodes.has(node.id)) {
-        const childCount = node.children.length;
-        let angleStep, startAngle;
-        
-        if (level === 0) {
-          angleStep = (Math.PI * 2) / childCount;
-          startAngle = 0;
-        } else {
-          const arcWidth = Math.min(Math.PI * 1.8, Math.PI * 0.4 * childCount);
-          angleStep = childCount > 1 ? arcWidth / (childCount - 1) : 0;
-          startAngle = angle - arcWidth / 2;
-        }
-        
-        node.children.forEach((child, index) => {
-          const childAngle = level === 0 
-            ? startAngle + angleStep * index
-            : startAngle + angleStep * index;
-          addNode(child, level + 1, childAngle, { x, y }, node.id, childCount);
-        });
-      }
-    };
-    
-    addNode(rootNode, 0, 0, null, null);
-    return { nodes, links };
-  }, [expandedNodes]);
 
-  // Handle window resize
+      if (!node.children || !expandedNodes.has(node.id)) return;
+
+      // 🔥 SUBTREE-AWARE ANGULAR DISTRIBUTION
+      const totalWeight = node.children.reduce(
+        (sum, c) => sum + getSubtreeSize(c),
+        0
+      );
+
+      let currentAngle = startAngle;
+
+      node.children.forEach((child) => {
+        const weight = getSubtreeSize(child);
+        const slice = (endAngle - startAngle) * (weight / totalWeight);
+
+        layoutNode(
+          child,
+          level + 1,
+          { x, y },
+          currentAngle,
+          currentAngle + slice,
+          node.id
+        );
+
+        currentAngle += slice;
+      });
+    };
+
+    layoutNode(rootNode, 0, { x: 0, y: 0 }, 0, Math.PI * 2);
+
+    return { nodes, links };
+  }, [expandedNodes, getSubtreeSize]);
+
   useEffect(() => {
     const handleResize = () => {
       if (containerRef.current) {
@@ -113,7 +138,6 @@ const MindMap = ({
     return () => window.removeEventListener('resize', handleResize);
   }, []);
 
-  // Setup D3 zoom behavior and fit view function
   useEffect(() => {
     const svg = d3.select(svgRef.current);
     
@@ -123,7 +147,6 @@ const MindMap = ({
     
     svg.call(zoom);
     
-    // Fit view function
     onFitView.current = () => {
       const currentRoot = getCurrentRoot();
       if (!currentRoot) return;
@@ -153,7 +176,6 @@ const MindMap = ({
     };
   }, [dimensions, getCurrentRoot, calculateLayout, onFitView]);
 
-  // Auto-fit view when data loads
   useEffect(() => {
     if (data && dimensions.width > 0 && onFitView.current && !isInitialized) {
       setTimeout(() => {
@@ -163,7 +185,6 @@ const MindMap = ({
     }
   }, [data, dimensions, isInitialized]);
 
-  // Node interaction handlers
   const handleNodeClick = (node) => {
     onNodeSelect(node);
     onToggleExpand(node.id);
@@ -189,7 +210,7 @@ const MindMap = ({
   };
 
   const currentRoot = getCurrentRoot();
-  const { nodes, links } = calculateLayout(currentRoot);
+  const { nodes, links } = useMemo(() => calculateLayout(currentRoot), [currentRoot, calculateLayout]);
 
   return (
     <div ref={containerRef} className="mindmap-container">
@@ -203,7 +224,6 @@ const MindMap = ({
         <rect width="100%" height="100%" fill="url(#grid)" />
         
         <g transform={transform.toString()}>
-          {/* Render links */}
           {links.map((link, index) => (
             <line
               key={index}
@@ -219,7 +239,6 @@ const MindMap = ({
             />
           ))}
           
-          {/* Render nodes */}
           {nodes.map((node) => (
             <Node
               key={node.id}
@@ -230,14 +249,13 @@ const MindMap = ({
               isSelected={selectedNode && selectedNode.id === node.id}
               isHighlighted={hoveredNode && hoveredNode.id === node.id}
               onClick={handleNodeClick}
-              onHover={(n) => handleNodeHover(n, d3.event)}
+              onHover={handleNodeHover}
               onHoverOut={handleNodeHoverOut}
             />
           ))}
         </g>
       </svg>
       
-      {/* Tooltip */}
       {tooltip.show && (
         <div
           className="tooltip"

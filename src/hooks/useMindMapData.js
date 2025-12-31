@@ -31,10 +31,20 @@ export const useMindMapData = () => {
     loadData();
   }, []);
 
+  // Clean data for JSON serialization (remove circular references)
+  const cleanDataForStorage = (node) => {
+    const { parent, siblingIndex, ...cleanNode } = node;
+    if (cleanNode.children) {
+      cleanNode.children = cleanNode.children.map(cleanDataForStorage);
+    }
+    return cleanNode;
+  };
+
   // Auto-save to localStorage whenever data changes
   useEffect(() => {
     if (data) {
-      localStorage.setItem('mindmap-data', JSON.stringify(data));
+      const cleanData = cleanDataForStorage(data);
+      localStorage.setItem('mindmap-data', JSON.stringify(cleanData));
     }
   }, [data]);
 
